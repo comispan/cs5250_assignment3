@@ -40,40 +40,29 @@ int onebyte_release(struct inode *inode, struct file *filep)
 ssize_t onebyte_read(struct file *filep, char *buf, size_t count, loff_t *f_pos)
 {
 	/*please complete the function on your own*/
-	int error_count = 0;
-	error_count = raw_copy_to_user(buf, onebyte_data, 1);
-
-	if(error_count==0) {
+	if (*f_pos == 0) {
+		raw_copy_to_user(buf, onebyte_data, 1);
+		*f_pos += 1;
+		// return 1, since the device only have 1 byte
 		printk(KERN_INFO "Onebyte device sent character to user\n");
+		return 1;
+	} else {
 		return 0;
-	}
-	else {
-		printk(KERN_ALERT "Onebyte device failed to send character to user\n");
-		return -EFAULT;
 	}
 }
 
 ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t *f_pos)
 {
 	/*please complete the function on your own*/
-	int error_count = 0;
-	if(count>1) {
-		// copy only the first character and return error
-		error_count = raw_copy_from_user(onebyte_data, buf, 1);
-		printk(KERN_ALERT "Onebyte device only accepting 1 character of data\n");
-		return -EINVAL;
+	if (*f_pos == 0) {
+		raw_copy_from_user(onebyte_data, buf, 1);	
+		*f_pos+=1;
+		printk(KERN_INFO "Onebyte device wrote a user character to device\n");
+		return 1;
+	} else {
+		// more than one character, return error message
+		return -ENOSPC;
 	}
-	if(count==1) {
-		error_count = raw_copy_from_user(onebyte_data, buf, count);
-		if(error_count != 0) {
-			printk(KERN_ALERT "Onebyte device failed to write character to device\n");
-			return -EFAULT;
-		} else {
-			printk(KERN_INFO "Onebyte device wrote user character to device\n");
-			return 0;
-		}
-	}
-	return 0;
 }
 static int onebyte_init(void)
 {
